@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Lenovo IdeaPad Gaming 3 — 3D Preview</title>
+<style>
+  :root { --accent:#2ccfff; --hot:#ff3b3b; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body {
+    height:100%; overflow:hidden;
+    background: radial-gradient(ellipse at 50% 40%, #1d2433 0%, #0a0c12 70%);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    color:#e8ecf3;
+  }
+  #app { position:fixed; inset:0; }
+  header { position:fixed; top:18px; left:22px; pointer-events:none; }
+  header h1 { font-size:20px; font-weight:600; letter-spacing:.3px; }
+  header h1 span { color:var(--accent); }
+  header p { font-size:13px; opacity:.6; margin-top:4px; }
+  .bar {
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+    padding:10px; background:rgba(20,24,34,.72); backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.08); border-radius:16px;
+    max-width:calc(100vw - 20px);
+  }
+  .bar .sep { width:1px; background:rgba(255,255,255,.12); margin:0 4px; }
+  button {
+    appearance:none; border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.06); color:#e8ecf3;
+    font-family:inherit; font-size:14px; font-weight:500;
+    padding:9px 14px; border-radius:10px; cursor:pointer; transition:.2s;
+  }
+  button:hover { background:rgba(255,255,255,.14); }
+  button.active { background:var(--accent); color:#04121a; border-color:transparent; }
+  button.hot.active { background:var(--hot); color:#fff; }
+  .legend {
+    position:fixed; top:18px; right:22px; font-size:13px; line-height:1.9;
+    padding:10px 14px; border-radius:12px; background:rgba(20,24,34,.72);
+    border:1px solid rgba(255,255,255,.08); opacity:0; transform:translateY(-6px);
+    transition:.35s; pointer-events:none;
+  }
+  .legend.show { opacity:1; transform:none; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:middle; }
+  .dot.in  { background:#ff4a4a; box-shadow:0 0 8px #ff4a4a; }
+  .dot.out { background:#ff8a2a; box-shadow:0 0 8px #ff8a2a; }
+  @media (max-width:600px) {
+    header h1 { font-size:16px; } header p { font-size:12px; }
+    button { font-size:13px; padding:8px 11px; }
+    .legend { top:auto; bottom:120px; right:12px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<header>
+  <h1>Lenovo <span>IdeaPad Gaming 3</span></h1>
+  <p>Drag to rotate · Scroll / pinch to zoom</p>
+</header>
+
+<div class="legend" id="legend">
+  <div><i class="dot in"></i>Cool air in — bottom grille</div>
+  <div><i class="dot out"></i>Hot air out — side gills</div>
+</div>
+
+<div class="bar">
+  <button id="bLid">Open lid</button>
+  <button id="bFlow" class="hot">Airflow</button>
+  <div class="sep"></div>
+  <button data-view="front">Front</button>
+  <button data-view="side">Side</button>
+  <button data-view="back">Back</button>
+  <button data-view="bottom">Bottom</button>
+  <button id="bSpin">Auto-rotate</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =========================================================
+   Renderer / Scene / Camera
+========================================================= */
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(4.6, 3.2, 5.6);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.7, 0);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 3;
+controls.maxDistance = 14;
+controls.autoRotateSpeed = 1.2;
+
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x1a1a22, 0.6));
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.6); keyLight.position.set(4, 6, 5); scene.add(keyLight);
+const rimLight = new THREE.DirectionalLight(0x66ccff, 0.9); rimLight.position.set(-5, 2, -4); scene.add(rimLight);
+const underLight = new THREE.DirectionalLight(0xffffff, 0.7); underLight.position.set(0, -5, 2); scene.add(underLight);
+
+/* =========================================================
+   Helpers
+========================================================= */
+const easeInOut = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function verticalLogo(bg, fg) {
+  return canvasTex(96, 384, (c, w, h) => {
+    c.fillStyle = bg; roundRect(c, 4, 4, w - 8, h - 8, 14); c.fill();
+    c.translate(w / 2, h / 2); c.rotate(-Math.PI / 2);
+    c.fillStyle = fg; c.font = '600 58px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('Lenovo', 0, 2);
+  });
+}
+
+/* =========================================================
+   Materials
+========================================================= */
+const shellMat = new THREE.MeshStandardMaterial({ color:0x3b3d42, metalness:0.35, roughness:0.55, envMapIntensity:0.6 });
+const blackMat = new THREE.MeshStandardMaterial({ color:0x17181b, metalness:0.2, roughness:0.7, envMapIntensity:0.5 });
+const bezelMat = new THREE.MeshStandardMaterial({ color:0x08090b, metalness:0.1, roughness:0.4 });
+const portMat  = new THREE.MeshStandardMaterial({ color:0x040405, roughness:0.9 });
+const padMat   = new THREE.MeshStandardMaterial({ color:0x34363b, metalness:0.3, roughness:0.35 });
+const keyMat   = new THREE.MeshStandardMaterial({ color:0x26282c, roughness:0.6, metalness:0.1, emissive:0x9fbaff, emissiveIntensity:0 });
+const plateMat = new THREE.MeshStandardMaterial({ color:0x111214, roughness:0.8, emissive:0x4d7dff, emissiveIntensity:0 });
+const blueMat  = new THREE.MeshStandardMaterial({ color:0x0a2a3a, emissive:0x22c8ff, emissiveIntensity:2.4 });
+
+/* =========================================================
+   Laptop model
+========================================================= */
+const laptop = new THREE.Group();
+scene.add(laptop);
+
+const W = 3.6, BH = 0.2, BD = 2.6;
+
+// Base + raised rear block
+const base = new THREE.Mesh(new RoundedBoxGeometry(W, BH, BD, 4, 0.05), shellMat);
+base.position.y = BH / 2;
+laptop.add(base);
+
+const rear = new THREE.Mesh(new RoundedBoxGeometry(W, 0.27, 0.3, 4, 0.05), blackMat);
+rear.position.set(0, 0.135, -1.43);
+laptop.add(rear);
+
+// Keyboard plate (glows between keys = backlight)
+const plate = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.006, 1.03), plateMat);
+plate.position.set(0, 0.2, -0.672);
+laptop.add(plate);
+
+// Keys (instanced)
+const u = 0.17, x0 = -1.655;
+const rows = [
+  { z:-1.10, d:0.10, keys:Array(15).fill(1) },
+  { z:-0.95, d:0.15, keys:[...Array(13).fill(1), 2] },
+  { z:-0.78, d:0.15, keys:[1.5, ...Array(12).fill(1), 1.5] },
+  { z:-0.61, d:0.15, keys:[1.75, ...Array(11).fill(1), 2.25] },
+  { z:-0.44, d:0.15, keys:[2.25, ...Array(10).fill(1), 2.75] },
+  { z:-0.27, d:0.15, keys:[1.5, 1, 1, 1.5, 6, 1.5, 1.5, 1] },
+];
+const keyDefs = [];
+rows.forEach(r => {
+  let x = x0;
+  r.keys.forEach(w => { keyDefs.push({ x:x + w*u/2, z:r.z, w:w*u - 0.025, d:r.d }); x += w*u; });
+  for (let i = 0; i < 4; i++) keyDefs.push({ x:0.975 + (i + 0.5)*u, z:r.z, w:u - 0.025, d:r.d }); // numpad
+});
+const keys = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), keyMat, keyDefs.length);
+const m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion();
+keyDefs.forEach((k, i) => {
+  m4.compose(new THREE.Vector3(k.x, 0.212, k.z), q0, new THREE.Vector3(k.w, 0.028, k.d));
+  keys.setMatrixAt(i, m4);
+});
+laptop.add(keys);
+
+// Touchpad
+const pad = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.006, 0.72), padMat);
+pad.position.set(-0.38, 0.2, 0.47);
+laptop.add(pad);
+
+// Palm-rest logo
+const palmLogo = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.08, 0.32),
+  new THREE.MeshStandardMaterial({ map:verticalLogo('#1f2023', '#c9cbd0'), roughness:0.5 })
+);
+palmLogo.rotation.x = -Math.PI / 2;
+palmLogo.position.set(1.5, 0.2025, 1.05);
+laptop.add(palmLogo);
+
+// Hinges
+for (const s of [-1, 1]) {
+  const h = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 20), blackMat);
+  h.rotation.z = Math.PI / 2;
+  h.position.set(s * 1.2, 0.235, -1.2);
+  laptop.add(h);
+}
+
+// Rear ports: power, HDMI, RJ45, USB-C, USB-A
+[[-0.62, 0.13, 0.07, 0.07], [-0.38, 0.13, 0.16, 0.06], [-0.12, 0.14, 0.15, 0.11],
+ [0.12, 0.13, 0.10, 0.04], [0.32, 0.13, 0.14, 0.06]].forEach(([x, y, w, h]) => {
+  const p = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.02), portMat);
+  p.position.set(x, y, -1.575);
+  laptop.add(p);
+});
+
+// Rear blue light strips (+ wrap on the rear-block sides)
+for (const s of [-1, 1]) {
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.03, 0.01), blueMat);
+  strip.position.set(s * 1.15, 0.06, -1.582);
+  laptop.add(strip);
+  const wrap = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.03, 0.2), blueMat);
+  wrap.position.set(s * 1.802, 0.06, -1.43);
+  laptop.add(wrap);
+}
+
+// Side exhaust gills (blue) — left & right
+const gillZones = [[-1.15, -0.78], [-0.7, -0.33]];
+for (const s of [-1, 1]) {
+  for (const [z1, z2] of gillZones) {
+    const len = z2 - z1, cz = (z1 + z2) / 2;
+    const g = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.05, len), blueMat);
+    g.position.set(s * 1.8, 0.1, cz);
+    laptop.add(g);
+    const nF = Math.floor(len / 0.045);
+    for (let i = 0; i < nF; i++) {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.056, 0.012), blackMat);
+      fin.position.set(s * 1.8, 0.1, z1 + (i + 0.5) * len / nF);
+      laptop.add(fin);
+    }
+  }
+}
+
+// Red glow over the exhaust gills
+const glowTex = canvasTex(128, 128, (c, w, h) => {
+  const g = c.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+});
+const exhaustGlows = [];
+for (const s of [-1, 1]) {
+  const gm = new THREE.MeshBasicMaterial({
+    color:0xff3020, map:glowTex, transparent:true, opacity:0,
+    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide
+  });
+  const gp = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.4), gm);
+  gp.rotation.y = s * Math.PI / 2;
+  gp.position.set(s * 1.83, 0.1, -0.74);
+  laptop.add(gp);
+  exhaustGlows.push(gm);
+}
+
+// Bottom intake grille (striped hexagon pattern)
+function drawGrille(ctx, w, h, bg, hole) {
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+  const cellW = w / 7, k = cellW * 0.25, m = 10;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, h/2); ctx.lineTo(k, m); ctx.lineTo(w - k, m);
+  ctx.lineTo(w, h/2); ctx.lineTo(w - k, h - m); ctx.lineTo(k, h - m); ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = hole;
+  for (let y = m + 4; y < h - m; y += 15) ctx.fillRect(0, y, w, 7);
+  ctx.restore();
+  ctx.strokeStyle = bg; ctx.lineWidth = 14; ctx.lineJoin = 'round';
+  for (const i of [0, 2, 4, 6]) {
+    const a = i * cellW, b = a + cellW;
+    ctx.beginPath();
+    ctx.moveTo(a, h/2); ctx.lineTo(a + k, m); ctx.lineTo(b - k, m);
+    ctx.lineTo(b, h/2); ctx.lineTo(b - k, h - m); ctx.lineTo(a + k, h - m); ctx.closePath();
+    ctx.stroke();
+  }
+}
+const grilleMap = canvasTex(1024, 284, (c, w, h) => drawGrille(c, w, h, '#2e3035', '#07080a'));
+const grilleEmi = canvasTex(1024, 284, (c, w, h) => drawGrille(c, w, h, '#000000', '#ffffff'));
+const grilleMat = new THREE.MeshStandardMaterial({
+  map:grilleMap, emissiveMap:grilleEmi, emissive:0xff2a1a, emissiveIntensity:0, roughness:0.7
+});
+const grille = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 0.8), grilleMat);
+grille.rotation.x = Math.PI / 2;
+grille.position.set(0, -0.002, -0.75);
+laptop.add(grille);
+
+// Rubber feet
+for (const s of [-1, 1]) for (const z of [-1.4, 1.1]) {
+  const f = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.02, 0.09), portMat);
+  f.position.set(s * 1.2, -0.01, z);
+  laptop.add(f);
+}
+
+/* ---------- Lid ---------- */
+const LD = 2.45, OPEN_ANGLE = 1.92;
+const lidPivot = new THREE.Group();
+lidPivot.position.set(0, 0.235, -1.2);
+laptop.add(lidPivot);
+
+const lidShell = new THREE.Mesh(new RoundedBoxGeometry(W, 0.07, LD, 4, 0.03), shellMat);
+lidShell.position.set(0, 0.035, LD / 2);
+lidPivot.add(lidShell);
+
+const bezel = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.04, LD - 0.04), bezelMat);
+bezel.rotation.x = Math.PI / 2;
+bezel.position.set(0, -0.001, LD / 2);
+lidPivot.add(bezel);
+
+// Screen (canvas texture)
+const SW = 1600, SH = 900;
+const sCanvas = document.createElement('canvas'); sCanvas.width = SW; sCanvas.height = SH;
+const sctx = sCanvas.getContext('2d');
+const screenTex = new THREE.CanvasTexture(sCanvas);
+screenTex.colorSpace = THREE.SRGBColorSpace;
+screenTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const screen = new THREE.Mesh(
+  new THREE.PlaneGeometry(3.36, 1.89),
+  new THREE.MeshBasicMaterial({ map:screenTex, toneMapped:false })
+);
+screen.rotation.x = Math.PI / 2;
+screen.position.set(0, -0.003, 1.305);
+lidPivot.add(screen);
+
+const cam = new THREE.Mesh(new THREE.CircleGeometry(0.025, 24), new THREE.MeshStandardMaterial({ color:0x111a2a, roughness:0.2 }));
+cam.rotation.x = Math.PI / 2;
+cam.position.set(0, -0.004, 2.35);
+lidPivot.add(cam);
+
+// Lid back logo
+const lidLogo = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.11, 0.44),
+  new THREE.MeshStandardMaterial({ map:verticalLogo('#5c5e63', '#2a2b2e'), metalness:0.5, roughness:0.4 })
+);
+lidLogo.rotation.set(-Math.PI / 2, 0, Math.PI);
+lidLogo.position.set(1.6, 0.0715, 1.9);
+lidPivot.add(lidLogo);
+
+// Soft contact shadow
+const shadowTex = canvasTex(256, 256, (c, w, h) => {
+  const g = c.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+  g.addColorStop(0, 'rgba(0,0,0,0.65)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+});
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 4.4),
+  new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, depthWrite:false }));
+shadow.rotation.x = -Math.PI / 2;
+shadow.position.y = -0.03;
+scene.add(shadow);
+
+/* =========================================================
+   Screen content: off -> black -> logo -> GUI
+========================================================= */
+let screenState = 'off', stateT = 0, lastDraw = 0, dirty = true;
+let flowOn = false;
+const clock = new THREE.Clock();
+
+function setScreen(s) { screenState = s; stateT = clock.elapsedTime; dirty = true; }
+
+function drawBlack() { sctx.fillStyle = '#000'; sctx.fillRect(0, 0, SW, SH); }
+
+function drawLogo(t) {
+  drawBlack();
+  const a = Math.min(1, t / 0.4);
+  sctx.globalAlpha = a;
+  sctx.fillStyle = '#fff';
+  sctx.font = '600 92px "Segoe UI", Arial';
+  sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+  sctx.fillText('Lenovo', SW / 2, SH / 2 - 60);
+  for (let i = 0; i < 5; i++) {
+    const ang = t * 4.2 - i * 0.38;
+    const x = SW / 2 + Math.cos(ang) * 30, y = SH / 2 + 140 + Math.sin(ang) * 30;
+    sctx.globalAlpha = a * (1 - i * 0.17);
+    sctx.beginPath(); sctx.arc(x, y, 6, 0, Math.PI * 2); sctx.fill();
+  }
+  sctx.globalAlpha = 1;
+}
+
+const facts = [
+  ['#2ccfff', 'Display',   '15.6" FHD IPS · 120–165 Hz'],
+  ['#4f7dff', 'Processor', 'Intel Core 12th Gen H / AMD Ryzen 6000H'],
+  ['#76d660', 'Graphics',  'Up to NVIDIA GeForce RTX 3060 (6 GB)'],
+  ['#b37bff', 'Memory',    '8–16 GB (DDR4 / DDR5 by model)'],
+  ['#ffb347', 'Storage',   'Up to 1 TB PCIe NVMe SSD'],
+  ['#ff5a5a', 'Cooling',   null],
+  ['#38e0b0', 'Battery',   '60 Wh · Rapid Charge'],
+  ['#c0c6d4', 'Weight',    'About 2.3 kg · ~22 mm thin'],
+];
+
+function drawDesktop(fade) {
+  // Wallpaper
+  const bg = sctx.createLinearGradient(0, 0, SW, SH);
+  bg.addColorStop(0, '#040a24'); bg.addColorStop(1, '#0b1f5c');
+  sctx.fillStyle = bg; sctx.fillRect(0, 0, SW, SH);
+  sctx.save();
+  sctx.translate(SW * 0.5, SH * 0.5);
+  sctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 7; i++) {
+    sctx.save();
+    sctx.rotate(i * Math.PI / 7 + 0.2);
+    const rg = sctx.createRadialGradient(0, -130, 10, 0, -130, 340);
+    rg.addColorStop(0, 'rgba(60,120,255,0.5)'); rg.addColorStop(1, 'rgba(20,40,160,0)');
+    sctx.fillStyle = rg;
+    sctx.beginPath(); sctx.ellipse(0, -130, 140, 340, 0, 0, Math.PI * 2); sctx.fill();
+    sctx.restore();
+  }
+  sctx.restore();
+
+  // Window
+  const wx = (SW - 860) / 2, wy = 60, ww = 860, wh = 710;
+  sctx.fillStyle = 'rgba(22,26,40,0.94)';
+  roundRect(sctx, wx, wy, ww, wh, 18); sctx.fill();
+  sctx.strokeStyle = 'rgba(255,255,255,0.12)'; sctx.lineWidth = 2; sctx.stroke();
+
+  sctx.textAlign = 'left'; sctx.textBaseline = 'alphabetic';
+  sctx.fillStyle = '#aeb8cc'; sctx.font = '22px "Segoe UI", Arial';
+  sctx.fillText('About this device', wx + 24, wy + 34);
+  sctx.textAlign = 'right'; sctx.fillText('—     ▢     ✕', wx + ww - 24, wy + 34);
+  sctx.fillStyle = 'rgba(255,255,255,0.08)'; sctx.fillRect(wx, wy + 52, ww, 2);
+
+  sctx.textAlign = 'left';
+  sctx.fillStyle = '#2ccfff'; sctx.fillRect(wx + 40, wy + 84, 6, 70);
+  sctx.fillStyle = '#ffffff'; sctx.font = '700 44px "Segoe UI", Arial';
+  sctx.fillText('Lenovo IdeaPad Gaming 3', wx + 62, wy + 122);
+  sctx.fillStyle = '#8fa3c7'; sctx.font = '22px "Segoe UI", Arial';
+  sctx.fillText('15.6-inch gaming laptop · Gen 7 (2022)', wx + 62, wy + 152);
+
+  const pulse = 0.6 + 0.4 * Math.sin(clock.elapsedTime * 6);
+  facts.forEach(([color, label, value], i) => {
+    const y = wy + 200 + i * 56;
+    if (i % 2 === 0) { sctx.fillStyle = 'rgba(255,255,255,0.03)'; sctx.fillRect(wx + 24, y - 6, ww - 48, 52); }
+    sctx.fillStyle = color;
+    if (label === 'Cooling' && flowOn) sctx.globalAlpha = pulse;
+    roundRect(sctx, wx + 44, y + 4, 34, 34, 8); sctx.fill();
+    sctx.globalAlpha = 1;
+    sctx.fillStyle = '#ffffff'; sctx.font = '600 24px "Segoe UI", Arial';
+    sctx.fillText(label, wx + 100, y + 30);
+    const v = value ?? (flowOn ? 'Fans ON · cool air in, hot air out' : 'Dual fans · bottom intake, side exhaust');
+    sctx.fillStyle = (label === 'Cooling' && flowOn) ? '#ff8a7a' : '#dfe6f5';
+    sctx.font = '24px "Segoe UI", Arial';
+    sctx.fillText(v, wx + 270, y + 30);
+  });
+  sctx.fillStyle = '#6f7d99'; sctx.font = 'italic 19px "Segoe UI", Arial';
+  sctx.fillText('* Specs vary by configuration and region', wx + 44, wy + wh - 24);
+
+  // Taskbar
+  sctx.fillStyle = 'rgba(16,20,34,0.92)'; sctx.fillRect(0, SH - 64, SW, 64);
+  const icons = ['win', '#3a7bd5', '#f2c94c', '#27ae60', '#eb5757', '#9b51e0', '#2ccfff'];
+  const startX = SW / 2 - (icons.length * 56) / 2;
+  icons.forEach((c, i) => {
+    const x = startX + i * 56, y = SH - 52;
+    if (c === 'win') {
+      sctx.fillStyle = '#4ea8ff';
+      sctx.fillRect(x + 6, y + 6, 13, 13); sctx.fillRect(x + 21, y + 6, 13, 13);
+      sctx.fillRect(x + 6, y + 21, 13, 13); sctx.fillRect(x + 21, y + 21, 13, 13);
+    } else { sctx.fillStyle = c; roundRect(sctx, x + 4, y + 4, 32, 32, 8); sctx.fill(); }
+  });
+  const d = new Date();
+  sctx.fillStyle = '#e8ecf3'; sctx.textAlign = 'right'; sctx.font = '20px "Segoe UI", Arial';
+  sctx.fillText(d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }), SW - 28, SH - 36);
+  sctx.fillText(d.toLocaleDateString(), SW - 28, SH - 12);
+  sctx.textAlign = 'left';
+
+  if (fade < 1) { sctx.fillStyle = `rgba(0,0,0,${1 - fade})`; sctx.fillRect(0, 0, SW, SH); }
+}
+
+function updateScreen(now) {
+  const e = now - stateT;
+  if (screenState === 'off' || screenState === 'black') {
+    if (dirty) { drawBlack(); screenTex.needsUpdate = true; dirty = false; }
+    if (screenState === 'black' && e > 1.0) setScreen('logo');
+  } else if (screenState === 'logo') {
+    drawLogo(e); screenTex.needsUpdate = true;
+    if (e > 1.8) setScreen('gui');
+  } else if (screenState === 'gui') {
+    const fade = Math.min(1, e / 0.7);
+    const interval = flowOn ? 0.1 : 1;
+    if (fade < 1 || dirty || now - lastDraw > interval) {
+      drawDesktop(fade); screenTex.needsUpdate = true; lastDraw = now; dirty = false;
+    }
+  }
+}
+
+/* =========================================================
+   Airflow particles
+========================================================= */
+const dotTex = canvasTex(64, 64, (c, w, h) => {
+  const g = c.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.4, 'rgba(255,255,255,0.6)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+});
+function makePoints(n, size) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  const mat = new THREE.PointsMaterial({
+    size, map:dotTex, vertexColors:true, transparent:true,
+    depthWrite:false, blending:THREE.AdditiveBlending
+  });
+  const p = new THREE.Points(geo, mat);
+  p.frustumCulled = false;
+  laptop.add(p);
+  return p;
+}
+
+// Intake: from below/sides -> into the bottom grille
+const NI = 520;
+const intake = makePoints(NI, 0.055);
+const inS = new Float32Array(NI * 3), inE = new Float32Array(NI * 3), inT = new Float32Array(NI), inSp = new Float32Array(NI);
+function spawnIn(i, randomT) {
+  const ex = (Math.random() * 2 - 1) * 1.35, ez = -1.1 + Math.random() * 0.7;
+  const side = ex >= 0 ? 1 : -1;
+  inE[i*3] = ex; inE[i*3+1] = -0.01; inE[i*3+2] = ez;
+  inS[i*3]   = ex + side * (0.2 + Math.random() * 1.3);
+  inS[i*3+1] = -0.35 - Math.random() * 1.0;
+  inS[i*3+2] = ez + (Math.random() * 2 - 1) * 0.5;
+  inT[i] = randomT ? Math.random() : 0;
+  inSp[i] = 0.45 + Math.random() * 0.5;
+}
+for (let i = 0; i < NI; i++) spawnIn(i, true);
+
+// Exhaust: out of the left/right gills
+const NE = 480;
+const exhaust = makePoints(NE, 0.075);
+const exP = new Float32Array(NE * 3), exV = new Float32Array(NE * 3), exT = new Float32Array(NE), exL = new Float32Array(NE);
+function spawnOut(i, randomT) {
+  const s = i % 2 ? 1 : -1;
+  exP[i*3] = s * 1.82; exP[i*3+1] = 0.08 + Math.random() * 0.04; exP[i*3+2] = -1.15 + Math.random() * 0.82;
+  exV[i*3] = s * (0.9 + Math.random() * 0.8); exV[i*3+1] = -0.15 + Math.random() * 0.6; exV[i*3+2] = -0.35 + Math.random() * 0.5;
+  exL[i] = 0.9 + Math.random() * 0.5;
+  exT[i] = 0;
+  if (randomT) { const t = Math.random() * exL[i]; exT[i] = t; for (let k = 0; k < 3; k++) exP[i*3+k] += exV[i*3+k] * t; }
+}
+for (let i = 0; i < NE; i++) spawnOut(i, true);
+
+function updateAir(dt, flow) {
+  const ip = intake.geometry.attributes.position.array, ic = intake.geometry.attributes.color.array;
+  for (let i = 0; i < NI; i++) {
+    inT[i] += dt * inSp[i];
+    if (inT[i] >= 1) spawnIn(i, false);
+    const t = inT[i], p = Math.pow(t, 1.7);
+    for (let k = 0; k < 3; k++) ip[i*3+k] = lerp(inS[i*3+k], inE[i*3+k], p);
+    const a = Math.min(1, t * 4) * Math.min(1, (1 - t) * 6) * flow;
+    ic[i*3] = a; ic[i*3+1] = 0.12 * a; ic[i*3+2] = 0.1 * a;
+  }
+  intake.geometry.attributes.position.needsUpdate = true;
+  intake.geometry.attributes.color.needsUpdate = true;
+
+  const ep = exhaust.geometry.attributes.position.array, ec = exhaust.geometry.attributes.color.array;
+  const drag = 1 - 0.6 * dt;
+  for (let i = 0; i < NE; i++) {
+    exT[i] += dt;
+    if (exT[i] > exL[i]) spawnOut(i, false);
+    exV[i*3+1] += 0.5 * dt;
+    for (let k = 0; k < 3; k++) { exV[i*3+k] *= drag; exP[i*3+k] += exV[i*3+k] * dt; ep[i*3+k] = exP[i*3+k]; }
+    const a01 = exT[i] / exL[i];
+    const a = Math.min(1, a01 * 6) * (1 - a01) * flow;
+    ec[i*3] = a; ec[i*3+1] = 0.35 * a; ec[i*3+2] = 0.08 * a;
+  }
+  exhaust.geometry.attributes.position.needsUpdate = true;
+  exhaust.geometry.attributes.color.needsUpdate = true;
+}
+
+/* =========================================================
+   Camera views (smooth spherical tween)
+========================================================= */
+const views = {
+  front:   { p:[0, 2.4, 6.4],     t:[0, 0.7, 0] },
+  side:    { p:[6.6, 1.4, 0.2],   t:[0, 0.6, 0] },
+  back:    { p:[-3.6, 2.6, -5.6], t:[0, 0.7, 0] },
+  bottom:  { p:[0.6, -5.6, 2.2],  t:[0, 0, -0.3] },
+  airflow: { p:[5.2, -2.2, 4.4],  t:[0, 0.2, -0.4] },
+};
+let tween = null;
+function goView(name) {
+  const v = views[name];
+  const tt = new THREE.Vector3(...v.t);
+  const from = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+  const to = new THREE.Spherical().setFromVector3(new THREE.Vector3(...v.p).sub(tt));
+  let dTheta = to.theta - from.theta;
+  dTheta = Math.atan2(Math.sin(dTheta), Math.cos(dTheta));
+  tween = { from, to, dTheta, ft:controls.target.clone(), tt, k:0 };
+}
+controls.addEventListener('start', () => { tween = null; });
+
+/* =========================================================
+   UI
+========================================================= */
+let lidOpen = false, lidP = 0, kb = 0, flow = 0;
+const bLid = document.getElementById('bLid');
+const bFlow = document.getElementById('bFlow');
+const bSpin = document.getElementById('bSpin');
+const legend = document.getElementById('legend');
+
+function setLid(open) {
+  lidOpen = open;
+  bLid.textContent = open ? 'Close lid' : 'Open lid';
+  bLid.classList.toggle('active', open);
+  if (!open) setScreen('off');
+}
+bLid.onclick = () => setLid(!lidOpen);
+bFlow.onclick = () => {
+  flowOn = !flowOn;
+  bFlow.classList.toggle('active', flowOn);
+  legend.classList.toggle('show', flowOn);
+  dirty = true;
+  if (flowOn) goView('airflow');
+};
+bSpin.onclick = () => {
+  controls.autoRotate = !controls.autoRotate;
+  bSpin.classList.toggle('active', controls.autoRotate);
+};
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => goView(b.dataset.view));
+
+function onResize() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.fov = innerWidth < innerHeight ? 62 : 40;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+addEventListener('resize', onResize);
+onResize();
+
+setTimeout(() => setLid(true), 900); // auto-open on load
+
+/* =========================================================
+   Loop
+========================================================= */
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const now = clock.elapsedTime;
+
+  // Lid
+  const target = lidOpen ? 1 : 0;
+  if (lidP !== target) {
+    lidP = THREE.MathUtils.clamp(lidP + Math.sign(target - lidP) * dt / 1.4, 0, 1);
+    if (lidOpen && lidP === 1 && screenState === 'off') setScreen('black');
+  }
+  lidPivot.rotation.x = -OPEN_ANGLE * easeInOut(lidP);
+
+  // Screen + keyboard backlight
+  updateScreen(now);
+  const kbTarget = (screenState === 'gui' || screenState === 'logo') ? 1 : 0;
+  kb += (kbTarget - kb) * Math.min(1, dt * 3);
+  keyMat.emissiveIntensity = 0.07 * kb;
+  plateMat.emissiveIntensity = 0.55 * kb;
+
+  // Airflow
+  flow += ((flowOn ? 1 : 0) - flow) * Math.min(1, dt * 3);
+  const visible = flow > 0.01;
+  intake.visible = exhaust.visible = visible;
+  if (visible) updateAir(dt, flow);
+  grilleMat.emissiveIntensity = flow * (1.2 + 0.6 * Math.sin(now * 5));
+  exhaustGlows.forEach(m => m.opacity = flow * (0.55 + 0.25 * Math.sin(now * 6)));
+
+  // Camera tween
+  if (tween) {
+    tween.k = Math.min(1, tween.k + dt / 1.2);
+    const e = easeInOut(tween.k);
+    const s = new THREE.Spherical(
+      lerp(tween.from.radius, tween.to.radius, e),
+      lerp(tween.from.phi, tween.to.phi, e),
+      tween.from.theta + tween.dTheta * e
+    );
+    controls.target.lerpVectors(tween.ft, tween.tt, e);
+    camera.position.setFromSpherical(s).add(controls.target);
+    if (tween.k >= 1) tween = null;
+  }
+
+  shadow.visible = camera.position.y > 0.2;
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
